@@ -1,0 +1,291 @@
+#!/usr/bin/env node
+"use strict";
+
+const HarvestClient = require('./HarvestClient').default;
+const projectCodeToHarvestEntry = require('./projectCodeToHarvestEntry').default;
+const readJsonFromFile = require('./readJsonFromFile').default;
+
+function padLeft( string, targetLength, padChar ) {
+	while( string.length < targetLength ) string = padChar + string;
+	return string;
+}
+function padRight( string, targetLength, padChar ) {
+	while( string.length < targetLength ) string = string + padChar;
+	return string;
+}
+
+function datePlusDays( date, days ) {
+	if( date == undefined ) {
+		throw new Error("Passed null fer date to datePlusDays");
+	}
+	if( typeof date != 'object' ) {
+		throw new Error("Passed non-object fer date to datePlusDays: "+date);
+	}
+	let copy = new Date(date);
+	copy.setDate( date.getDate() + days );
+	return copy;
+}
+const hoursSecondsRegex = /^(\d+):(\d+)$/
+function datePlusTime( date, time ) {
+	if( date == undefined ) {
+		throw new Error("Passed null fer date to datePlusTime");
+	}
+	if( typeof date != 'object' ) {
+		throw new Error("Passed non-object fer date to datePlusTime: "+date);
+	}
+	if( typeof time == 'string' ) {
+		let m = hoursSecondsRegex.exec(time);
+		if( m == undefined ) throw new Error("Time doesn't parse: "+time);
+		time = parseInt(m[1])*60*60 + parseInt(m[2])*60;
+	}
+	return new Date(date.getTime() + time*1000);
+}
+function parseDate( str ) {
+	return new Date(Date.parse(str+'T00:00:00+06:00'));
+}
+function dateToString() {
+	return date.getFullYear()+'-'+(date.getMonth()+1)+'-'+date.getDate();
+}
+
+const readline = require('readline');
+
+const dateRegex = /^=\s+(\d+\-\d\d\-\d\d)/;
+const isPeriodRegex = /^(\d+:\d+)\-/;
+const periodRegex = /^(\d+:\d+)\-(\d+:\d+)\t+(\S+)(?:\t+(.*))?(\s*\\)?$/;
+const continuationRegex = /^\t+(.*)(\s*\\)?$/;
+let lineNumber = 0;
+let processingDate = undefined;
+let processingDateStr = undefined;
+let processingEntry = undefined;
+let includeUnbillable = false;
+let shouldUploadToHarvest = false;
+
+const weekEndingRegex = /^--week-ending=(.*)/;
+const startDateRegex = /^--start-date=(.*)/;
+const endDateRegex = /^--end-date=(.*)/;
+const uploadToHarvestRegex = /^--upload-to-harvest=(yes|no|prompt)$/;
+
+let targetStartDate = undefined;
+let targetEndDate = undefined;
+let faults = [];
+let entries = [];
+
+let currentEntry = {};
+let previousLineContinued = false;
+
+let args = process.argv.slice(2);
+
+function processArgv( argv ) {
+	for( let i=0; i<args.length; ++i ) {
+		let arg = args[i];
+		let m;
+		if( (m = weekEndingRegex.exec(arg)) ) {
+			targetEndDate = parseDate(m[1]);
+			targetStartDate = datePlusDays(targetEndDate, -6);
+		} else if( (m = endDateRegex.exec(arg)) ) {
+			targetEndDate = parseDate(m[1]);
+		} else if( (m = startDateRegex.exec(arg)) ) {
+			targetStartDate = parseDate(m[1]);
+		} else if( arg == '--upload-to-harvest' ) {
+			shouldUploadToHarvest = true;
+		} else if( (m = uploadToHarvestRegex.exec(arg))) {
+			switch( m[1] ) {
+			case 'yes': shouldUploadToHarvest = true; break;
+			case 'no': shouldUploadToHarvest = false; break;
+			case 'prompt': shouldUploadToHarvest = 'prompt'; break;
+			}
+		} else {
+			return Promise.reject(new Error("Unrecognized argument: '"+arg+"'"));
+		}
+	}
+	return Promise.resolve();
+};
+
+processArgv( process.argv.slice(2) ).then( () => {
+	let rl = readline.createInterface({
+		input: process.stdin,
+		isTerminal: false
+	});
+	
+	return new Promise( (resolve,reject) => {
+		rl.on('close', resolve);
+		rl.on('line', (line) => {
+			++lineNumber;
+			let m;
+			
+			if( previousLineContinued ) {
+				let m = continuationRegex.exec(line);
+				if( !m ) {
+					faults.push({
+						lineNumber,
+						typeCode: "malformed-continuation",
+						message: "Malformed continuation line: "+line
+					});
+					return;
+				}
+				
+				currentEntry.notes += " "+m[1].trim();
+				previousLineContinued = m[2] != undefined;
+				return;
+			}
+			
+			if( (m = dateRegex.exec(line)) ) {
+				let dateStr = m[1];
+				let date = new Date(parseDate(dateStr));
+				if( processingDate != undefined && date <= processingDate ) {
+					faults.push({
+						lineNumber,
+						typeCode: "out-of-order-days",
+						message: date.toISOString()+" <= "+processingDate.toISOString()
+					});
+				}
+				if( processingDate == undefined || date > processingDate ) processingDate = date;
+				processingDateStr = dateStr;
+				return;
+			}
+			
+			if(
+				(targetStartDate != undefined && processingDate < targetStartDate) ||
+				(targetEndDate != undefined && processingDate > targetEndDate)
+			) {
+				return; // Because we don't care!
+			}
+			
+			if( isPeriodRegex.exec(line) ) {
+				m = periodRegex.exec(line);
+				
+				if( !m ) {
+					faults.push({
+						lineNumber,
+						typeCode: "malformed-time-period",
+						message: "Malformed period line: "+line
+					});
+					return;
+				}
+				
+				let startTimeStr = m[1];
+				let endTimeStr = m[2];
+				let projectCode = m[3];
+				let notes = m[4];
+				let continueSlash = m[5];
+				if( continueSlash ) previousLineContinued = true;
+				
+				let startTime = datePlusTime(processingDate, m[1]);
+				let endTime   = datePlusTime(processingDate, m[2]);
+				//let interval  = endTime - startTime;
+				
+				entries.push(processingEntry = {
+					dateCode: processingDateStr,
+					startTime, endTime,
+					projectCode, notes,
+				});
+				//console.log(projectCode+" for "+(interval/60000)+" minutes");
+				
+				return;
+			}
+		});
+	});
+}).then( () => {
+	let byDate = {};
+	let totalHours = 0;
+	let totalHoursByDate = {};
+	let totalHoursByProjectCode = {};
+	for( let e in entries ) {
+		let entry = entries[e];
+		let projectCodeParts = entry.projectCode.split('/');
+
+		if( projectCodeParts[0] == 'unbillable' && !includeUnbillable ) continue;
+			
+		if( byDate[entry.dateCode] == undefined ) byDate[entry.dateCode] = {
+			entries: [],
+			totalHours: 0,
+			hoursByProjectCode: {}
+		};
+		let day = byDate[entry.dateCode];
+		let hours = (entry.endTime - entry.startTime) / 3600000;
+		day.totalHours += hours;
+		day.entries.push(entry);
+		day.hoursByProjectCode[entry.projectCode] = (day.hoursByProjectCode[entry.projectCode] || 0) + hours;
+		totalHoursByProjectCode[entry.projectCode] = (totalHoursByProjectCode[entry.projectCode] || 0) + hours;
+		totalHours += hours;
+	}
+	//console.log(JSON.stringify(byDate, null, "\t"));
+	for( let date in byDate ) {
+		let day = byDate[date];
+		console.log(date+": total: "+padLeft(day.totalHours.toFixed(2), 5, " ")+" hours");
+		for( let projectCode in day.hoursByProjectCode ) {
+			console.log("    "+padRight(projectCode, 30, " ")+": "+padLeft(day.hoursByProjectCode[projectCode], 5, " ")+" hours");
+		}
+	}
+	for( let projectCode in totalHoursByProjectCode ) {
+		console.log("Total for "+padRight(projectCode, 30, " ")+": "+padLeft(totalHoursByProjectCode[projectCode].toFixed(2), 5, " "));
+	}
+	console.log("Total: "+totalHours);
+}).then( () => {
+	if( faults.length > 0 ) {
+		console.error();
+		console.error("Faults:");
+		for( let f in faults ) {
+			console.error("Line "+faults[f].lineNumber+": "+faults[f].message);
+		}
+		return Promise.reject(new Error("There were faults."));
+	}
+}).then( () => {
+	if( shouldUploadToHarvest == 'prompt' ) {
+		shouldUploadToHarvest = false;
+		console.error("Need to refactor analyze a bit before can prompt for harvest upload.");
+		process.exitCode = 1;
+	}
+}).then( () => {
+	if( !shouldUploadToHarvest ) return;
+
+	console.log("Processing for upload to harvest...")
+	let newHarvestEntries = [];
+	let nameTranslationErrors = {};
+	let harvestEntriesByDate = {};
+	for( let e in entries ) {
+		let entry = entries[e];
+		let harvestEntry;
+		try {
+			harvestEntry = projectCodeToHarvestEntry(entry.projectCode);
+			harvestEntry.hours = (entry.endTime - entry.startTime) / 3600000;
+			harvestEntry.notes = [
+				harvestEntry.notes,
+				entry.notes
+			].filter( (v) => v != null && v.length > 0 ).join(": ");
+		} catch( err ) {
+			nameTranslationErrors[entry.projectCode] = err;
+		}
+		if( harvestEntry != null ) {
+			if( !harvestEntriesByDate[entry.dateCode] ) {
+				harvestEntriesByDate[entry.dateCode] = [];
+			}
+			harvestEntriesByDate[entry.dateCode].push(harvestEntry);
+		}
+	}
+	let unparseableProjectCodes = [];
+	for( let projectCode in nameTranslationErrors ) unparseableProjectCodes.push(projectCode);
+	
+	if( unparseableProjectCodes.length > 0 ) {
+		let msg = "The following project codes were not understood; plz add mappings or fix spelling:\n"+
+			unparseableProjectCodes.join(", ");
+		return Promise.reject(new Error(msg));
+	}
+	
+	return readJsonFromFile('harvest-api.config.json').then( (config) => {
+		return new HarvestClient(config);
+	}).then( (harvestClient) => {
+		let updateProm = Promise.resolve();
+		for( let date in harvestEntriesByDate ) {
+			updateProm = updateProm.then( () => {
+				console.log("Uploading hours for "+date+" to Harvest...");
+				return harvestClient.updateHoursForDay(date, harvestEntriesByDate[date])
+			});
+		}
+		return updateProm;
+	})
+}).catch( (err) => {
+	console.error();
+	console.error(err.stack);
+	process.exitCode = 1;
+});

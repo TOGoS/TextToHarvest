@@ -1,0 +1,58 @@
+"use strict";
+
+module.exports.default = function( name ) {
+	let m;
+	switch( name ) {
+	case 'align/ep/meet': return {
+		projectId: 12642303,
+		taskId: 2909951
+	};
+	case 'align/ep/dev': return {
+		projectId: 12642303,
+		taskId: 1918572
+	};
+	case 'earthit/pdficate/dev': return {
+		projectId: 13156258,
+		taskId: 1918572,
+	};
+	case 'earthit/fssk': return {
+		projectId: 9686850,
+		taskId: 6977423
+	};
+	case 'earthit/log': return {
+		projectId: 3257319,
+		taskId: 1920926
+	};
+	case 'earthit/phrebar': return {
+		projectId: 9686850,
+		taskId: 5304076
+	};
+	case 'earthit/team-meet': return {
+		projectId: 3257319,
+		taskId: 4936441
+	};
+	case 'earthit/tech-talk': return {
+		projectId: 9684460, // 'Professional development'
+		taskId: 1920940
+	};
+	case 'earthit/steve+dan-meet': return {
+		projectId: 3257319,
+		taskId: 4936441,
+		notes: "Steve+Dan meeting"
+	};
+	case 'earthit/non-billable-healthcare-proposals/meeting': return {
+		projectId: 9680979,
+		taskId: 5295785
+	};
+	} // endo el switcho
+
+	if( (m = /^unbillable\b/.exec(name)) ) return null;
+	if( (m = /^align\/ep\/(EMPENGAGE-\d+)$/.exec(name)) ) return {
+		projectId: 12642303,
+		taskId: 1918572,
+		notes: m[1],
+		link: "https://earthling.atlassian.net/browse/"+m[1]
+	};
+	
+	throw new Error("Unrecognized task: '"+name+"'");
+};
