@@ -66,7 +66,7 @@ const uploadToHarvestRegex = /^--upload-to-harvest=(yes|no|prompt)$/;
 let inputFiles = [];
 let targetStartDate = undefined;
 let targetEndDate = undefined;
-let faults = [];
+let validationErrors = [];
 let entries = [];
 
 let currentEntry = {};
@@ -138,7 +138,7 @@ processArgv( process.argv.slice(2) ).then( () => {
 				if( previousLineContinued ) {
 					let m = continuationLineRegex.exec(line);
 					if( !m ) {
-						faults.push({
+						validationErrors.push({
 							filename,
 							lineNumber,
 							typeCode: "malformed-continuation",
@@ -156,7 +156,7 @@ processArgv( process.argv.slice(2) ).then( () => {
 					let dateStr = m[1];
 					let date = new Date(parseDate(dateStr));
 					if( processingDate != undefined && date <= processingDate ) {
-						faults.push({
+						validationErrors.push({
 							filename,
 							lineNumber,
 							typeCode: "out-of-order-days",
@@ -179,7 +179,7 @@ processArgv( process.argv.slice(2) ).then( () => {
 					m = periodLineRegex.exec(line);
 					
 					if( !m ) {
-						faults.push({
+						validationErrors.push({
 							filename,
 							lineNumber,
 							typeCode: "malformed-time-period",
@@ -249,14 +249,14 @@ processArgv( process.argv.slice(2) ).then( () => {
 	}
 	console.log("Total: "+totalHours);
 }).then( () => {
-	if( faults.length > 0 ) {
+	if( validationErrors.length > 0 ) {
 		console.error();
-		console.error("Faults:");
-		for( let f in faults ) {
-			let fault = faults[f];
+		console.error("Invalid input:");
+		for( let f in validationErrors ) {
+			let fault = validationErrors[f];
 			console.error("Line "+fault.filename+":"+fault.lineNumber+": "+fault.message);
 		}
-		return Promise.reject(new Error("There were faults."));
+		return Promise.reject(new Error("There were errors with your input."));
 	}
 }).then( () => {
 	if( shouldUploadToHarvest == 'prompt' ) {
