@@ -36,7 +36,7 @@ You will probably need to add cases to that function specific to whatever projec
 
 ## Harvest API config
 
-Copy ```harvest-api.config.json.example``` to ``harvest-api.config.json```
+Copy ```harvest-api.config.json.example``` to ```harvest-api.config.json```
 in the working directory from which you will be calling ```analyze```,
 and add your username and password.
 
