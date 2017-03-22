@@ -49,22 +49,21 @@ function dateToString() {
 
 const readline = require('readline');
 
-const dateRegex = /^=\s+(\d+\-\d\d\-\d\d)/;
-const isPeriodRegex = /^(\d+:\d+)\-/;
-const periodRegex = /^(\d+:\d+)\-(\d+:\d+)\t+(\S+)(?:\t+(.*))?(\s*\\)?$/;
-const continuationRegex = /^\t+(.*)(\s*\\)?$/;
-let lineNumber = 0;
-let processingDate = undefined;
-let processingDateStr = undefined;
-let processingEntry = undefined;
+const dateLineRegex = /^=\s+(\d+\-\d\d\-\d\d)/;
+const lineIsPeriodRegex = /^(\d+:\d+)\-/;
+const periodLineRegex = /^(\d+:\d+)\-(\d+:\d+)\t+(\S+)(?:\t+(.*))?(\s*\\)?$/;
+const continuationLineRegex = /^\t+(.*)(\s*\\)?$/;
+
 let includeUnbillable = false;
 let shouldUploadToHarvest = false;
 
+const dateArgRegex = /^--date=(.*)/;
 const weekEndingRegex = /^--week-ending=(.*)/;
 const startDateRegex = /^--start-date=(.*)/;
 const endDateRegex = /^--end-date=(.*)/;
 const uploadToHarvestRegex = /^--upload-to-harvest=(yes|no|prompt)$/;
 
+let inputFiles = [];
 let targetStartDate = undefined;
 let targetEndDate = undefined;
 let faults = [];
@@ -79,7 +78,10 @@ function processArgv( argv ) {
 	for( let i=0; i<args.length; ++i ) {
 		let arg = args[i];
 		let m;
-		if( (m = weekEndingRegex.exec(arg)) ) {
+		if( (m = dateArgRegex.exec(arg)) ) {
+			targetStartDate = parseDate(m[1]);
+			targetEndDate = parseDate(m[1]);
+		} else if( (m = weekEndingRegex.exec(arg)) ) {
 			targetEndDate = parseDate(m[1]);
 			targetStartDate = datePlusDays(targetEndDate, -6);
 		} else if( (m = endDateRegex.exec(arg)) ) {
@@ -94,6 +96,8 @@ function processArgv( argv ) {
 			case 'no': shouldUploadToHarvest = false; break;
 			case 'prompt': shouldUploadToHarvest = 'prompt'; break;
 			}
+		} else if( arg.length > 0 && (arg[0] != '-' || arg == '-') ) {
+			inputFiles.push(arg);
 		} else {
 			return Promise.reject(new Error("Unrecognized argument: '"+arg+"'"));
 		}
@@ -102,89 +106,112 @@ function processArgv( argv ) {
 };
 
 processArgv( process.argv.slice(2) ).then( () => {
-	let rl = readline.createInterface({
-		input: process.stdin,
-		isTerminal: false
-	});
-	
-	return new Promise( (resolve,reject) => {
-		rl.on('close', resolve);
-		rl.on('line', (line) => {
-			++lineNumber;
-			let m;
+	if( inputFiles.length == 0 ) inputFiles.push('-');
+
+	let processInputsPromise = Promise.resolve();
+	for( let i in inputFiles ) {
+		processInputsPromise = processInputsPromise.then( () => new Promise( (resolve,reject) => {
+			let filename = inputFiles[i];
+			let lineNumber = 0;
+			let processingDate = undefined;
+			let processingDateStr = undefined;
+			let processingEntry = undefined;
+			let instream;
+			if( filename == '-' ) {
+				instream = process.stdin;
+			} else {
+				instream = require('fs').createReadStream(filename);
+			}
+			let rl = readline.createInterface({
+				input: instream,
+				isTerminal: false
+			});
 			
-			if( previousLineContinued ) {
-				let m = continuationRegex.exec(line);
-				if( !m ) {
-					faults.push({
-						lineNumber,
-						typeCode: "malformed-continuation",
-						message: "Malformed continuation line: "+line
-					});
+			instream.on('error', (err) => {
+				reject(new Error("Error reading '"+filename+"': "+err.message));
+			});
+			rl.on('close', resolve);
+			rl.on('line', (line) => {
+				++lineNumber;
+				let m;
+				
+				if( previousLineContinued ) {
+					let m = continuationLineRegex.exec(line);
+					if( !m ) {
+						faults.push({
+							filename,
+							lineNumber,
+							typeCode: "malformed-continuation",
+							message: "Malformed continuation line: "+line
+						});
+						return;
+					}
+					
+					currentEntry.notes += " "+m[1].trim();
+					previousLineContinued = m[2] != undefined;
 					return;
 				}
 				
-				currentEntry.notes += " "+m[1].trim();
-				previousLineContinued = m[2] != undefined;
-				return;
-			}
-			
-			if( (m = dateRegex.exec(line)) ) {
-				let dateStr = m[1];
-				let date = new Date(parseDate(dateStr));
-				if( processingDate != undefined && date <= processingDate ) {
-					faults.push({
-						lineNumber,
-						typeCode: "out-of-order-days",
-						message: date.toISOString()+" <= "+processingDate.toISOString()
-					});
-				}
-				if( processingDate == undefined || date > processingDate ) processingDate = date;
-				processingDateStr = dateStr;
-				return;
-			}
-			
-			if(
-				(targetStartDate != undefined && processingDate < targetStartDate) ||
-				(targetEndDate != undefined && processingDate > targetEndDate)
-			) {
-				return; // Because we don't care!
-			}
-			
-			if( isPeriodRegex.exec(line) ) {
-				m = periodRegex.exec(line);
-				
-				if( !m ) {
-					faults.push({
-						lineNumber,
-						typeCode: "malformed-time-period",
-						message: "Malformed period line: "+line
-					});
+				if( (m = dateLineRegex.exec(line)) ) {
+					let dateStr = m[1];
+					let date = new Date(parseDate(dateStr));
+					if( processingDate != undefined && date <= processingDate ) {
+						faults.push({
+							filename,
+							lineNumber,
+							typeCode: "out-of-order-days",
+							message: date.toISOString()+" <= "+processingDate.toISOString()
+						});
+					}
+					if( processingDate == undefined || date > processingDate ) processingDate = date;
+					processingDateStr = dateStr;
 					return;
 				}
 				
-				let startTimeStr = m[1];
-				let endTimeStr = m[2];
-				let projectCode = m[3];
-				let notes = m[4];
-				let continueSlash = m[5];
-				if( continueSlash ) previousLineContinued = true;
+				if(
+					(targetStartDate != undefined && processingDate < targetStartDate) ||
+					(targetEndDate != undefined && processingDate > targetEndDate)
+				) {
+					return; // Because we don't care!
+				}
 				
-				let startTime = datePlusTime(processingDate, m[1]);
-				let endTime   = datePlusTime(processingDate, m[2]);
-				//let interval  = endTime - startTime;
-				
-				entries.push(processingEntry = {
-					dateCode: processingDateStr,
-					startTime, endTime,
-					projectCode, notes,
-				});
-				//console.log(projectCode+" for "+(interval/60000)+" minutes");
-				
-				return;
-			}
-		});
-	});
+				if( lineIsPeriodRegex.exec(line) ) {
+					m = periodLineRegex.exec(line);
+					
+					if( !m ) {
+						faults.push({
+							filename,
+							lineNumber,
+							typeCode: "malformed-time-period",
+							message: "Malformed period line: "+line
+						});
+						return;
+					}
+					
+					let startTimeStr = m[1];
+					let endTimeStr = m[2];
+					let projectCode = m[3];
+					let notes = m[4];
+					let continueSlash = m[5];
+					if( continueSlash ) previousLineContinued = true;
+					
+					let startTime = datePlusTime(processingDate, m[1]);
+					let endTime   = datePlusTime(processingDate, m[2]);
+					//let interval  = endTime - startTime;
+					
+					entries.push(processingEntry = {
+						dateCode: processingDateStr,
+						startTime, endTime,
+						projectCode, notes,
+					});
+					//console.log(projectCode+" for "+(interval/60000)+" minutes");
+					
+					return;
+				}
+			});
+		}));
+	}
+	return processInputsPromise;
 }).then( () => {
 	let byDate = {};
 	let totalHours = 0;
@@ -226,7 +253,8 @@ processArgv( process.argv.slice(2) ).then( () => {
 		console.error();
 		console.error("Faults:");
 		for( let f in faults ) {
-			console.error("Line "+faults[f].lineNumber+": "+faults[f].message);
+			let fault = faults[f];
+			console.error("Line "+fault.filename+":"+fault.lineNumber+": "+fault.message);
 		}
 		return Promise.reject(new Error("There were faults."));
 	}
