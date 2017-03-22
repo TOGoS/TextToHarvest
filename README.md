@@ -9,7 +9,7 @@ including linking to Jira tickets.
 ```sh
 analyze \
   [--week-ending=<yyyy-mm-dd>|--start-date=<yyyy-mm-dd> --end-date=<yyyy-mm-dd>|--date=<yyyy-mm-dd>] \
-  [---upload-to-harvest] \
+  [--upload-to-harvest] \
   <log file.txt>
 ```
 
