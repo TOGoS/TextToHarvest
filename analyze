@@ -54,9 +54,10 @@ const lineIsPeriodRegex = /^(\d+:\d+)\-/;
 const periodLineRegex = /^(\d+:\d+)\-(\d+:\d+)\t+(\S+)(?:\t+(.*))?(\s*\\)?$/;
 const continuationLineRegex = /^\t+(.*)(\s*\\)?$/;
 
-let includeUnbillable = false;
+let ignoreProjectCodes = {};
 let shouldUploadToHarvest = false;
 
+const ignoreProjectCodesArgRegex = /^--ignore-project-codes=(.*)$/;
 const dateArgRegex = /^--date=(.*)/;
 const weekEndingRegex = /^--week-ending=(.*)/;
 const startDateRegex = /^--start-date=(.*)/;
@@ -95,6 +96,12 @@ function processArgv( argv ) {
 			case 'yes': shouldUploadToHarvest = true; break;
 			case 'no': shouldUploadToHarvest = false; break;
 			case 'prompt': shouldUploadToHarvest = 'prompt'; break;
+			}
+		} else if( (m = ignoreProjectCodesArgRegex.exec(arg)) ) {
+			let codes = m[1].split(',');
+			for( let c in codes ) {
+				console.log("Ignore "+codes[c]);
+				ignoreProjectCodes[codes[c]] = codes[c];
 			}
 		} else if( arg.length > 0 && (arg[0] != '-' || arg == '-') ) {
 			inputFiles.push(arg);
@@ -221,7 +228,7 @@ processArgv( process.argv.slice(2) ).then( () => {
 		let entry = entries[e];
 		let projectCodeParts = entry.projectCode.split('/');
 
-		if( projectCodeParts[0] == 'unbillable' && !includeUnbillable ) continue;
+		if( ignoreProjectCodes[entry.projectCode] || ignoreProjectCodes[projectCodeParts[0]] ) continue;
 			
 		if( byDate[entry.dateCode] == undefined ) byDate[entry.dateCode] = {
 			entries: [],
