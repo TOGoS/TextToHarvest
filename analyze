@@ -2,7 +2,7 @@
 "use strict";
 
 const HarvestClient = require('./HarvestClient').default;
-const projectCodeToHarvestEntry = require('./projectCodeToHarvestEntry').default;
+let projectCodeParserModulePath = './projectCodeToHarvestEntry';
 const readJsonFromFile = require('./readJsonFromFile').default;
 
 function padLeft( string, targetLength, padChar ) {
@@ -63,6 +63,7 @@ const weekEndingRegex = /^--week-ending=(.*)/;
 const startDateRegex = /^--start-date=(.*)/;
 const endDateRegex = /^--end-date=(.*)/;
 const uploadToHarvestRegex = /^--upload-to-harvest=(yes|no|prompt)$/;
+const projectCodeParserModuleArgRegex = /^--project-code-parser-module=(.*)$/;
 
 let inputFiles = [];
 let targetStartDate = undefined;
@@ -103,6 +104,8 @@ function processArgv( argv ) {
 				console.log("Ignore "+codes[c]);
 				ignoreProjectCodes[codes[c]] = codes[c];
 			}
+		} else if( (m = projectCodeParserModuleArgRegex.exec(arg)) ) {
+			projectCodeParserModulePath = require('path').resolve(m[1]);
 		} else if( arg.length > 0 && (arg[0] != '-' || arg == '-') ) {
 			inputFiles.push(arg);
 		} else {
@@ -273,6 +276,10 @@ processArgv( process.argv.slice(2) ).then( () => {
 	}
 }).then( () => {
 	if( !shouldUploadToHarvest ) return;
+
+	// If this was overridden on the command line,
+	// then it will have been resolved to an absolute path.
+	const projectCodeToHarvestEntry = require(projectCodeParserModulePath).default;
 
 	console.log("Processing for upload to harvest...")
 	let newHarvestEntries = [];
