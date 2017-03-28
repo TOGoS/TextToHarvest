@@ -120,7 +120,7 @@ function processArgv( argv ) {
 
 processArgv( process.argv.slice(2) ).then( () => {
 	if( inputFiles.length == 0 ) inputFiles.push('-');
-
+	
 	let processInputsPromise = Promise.resolve();
 	for( let i in inputFiles ) {
 		processInputsPromise = processInputsPromise.then( () => new Promise( (resolve,reject) => {
@@ -226,16 +226,19 @@ processArgv( process.argv.slice(2) ).then( () => {
 	}
 	return processInputsPromise;
 }).then( () => {
+	entries = entries.filter( (entry) => {
+		let projectCodeParts = entry.projectCode.split('/');
+		if( ignoreProjectCodes[entry.projectCode] || ignoreProjectCodes[projectCodeParts[0]] ) return false;
+		return true;
+	});
+}).then( () => {
 	let byDate = {};
 	let totalHours = 0;
 	let totalHoursByDate = {};
 	let totalHoursByProjectCode = {};
 	for( let e in entries ) {
 		let entry = entries[e];
-		let projectCodeParts = entry.projectCode.split('/');
-
-		if( ignoreProjectCodes[entry.projectCode] || ignoreProjectCodes[projectCodeParts[0]] ) continue;
-			
+		
 		if( byDate[entry.dateCode] == undefined ) byDate[entry.dateCode] = {
 			entries: [],
 			totalHours: 0,
