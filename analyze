@@ -56,13 +56,14 @@ const continuationLineRegex = /^\t+(.*)(\s*\\)?$/;
 
 let ignoreProjectCodes = {};
 let shouldUploadToHarvest = false;
+let shouldProcessForHarvest = false;
 
 const ignoreProjectCodesArgRegex = /^--ignore-project-codes=(.*)$/;
 const dateArgRegex = /^--date=(.*)/;
 const weekEndingRegex = /^--week-ending=(.*)/;
 const startDateRegex = /^--start-date=(.*)/;
 const endDateRegex = /^--end-date=(.*)/;
-const uploadToHarvestRegex = /^--upload-to-harvest=(yes|no|prompt)$/;
+const uploadToHarvestRegex = /^--upload-to-harvest=(.*)$/;
 const projectCodeParserModuleArgRegex = /^--project-code-parser-module=(.*)$/;
 
 let inputFiles = [];
@@ -97,6 +98,9 @@ function processArgv( argv ) {
 			case 'yes': shouldUploadToHarvest = true; break;
 			case 'no': shouldUploadToHarvest = false; break;
 			case 'prompt': shouldUploadToHarvest = 'prompt'; break;
+			case 'dry-run': shouldUploadToHarvest = 'dry-run'; break;
+			default:
+				throw new Error("Invalid value for '--upload-to-harvest': '"+m[1]+"'");
 			}
 		} else if( (m = ignoreProjectCodesArgRegex.exec(arg)) ) {
 			let codes = m[1].split(',');
@@ -270,12 +274,18 @@ processArgv( process.argv.slice(2) ).then( () => {
 	}
 }).then( () => {
 	if( shouldUploadToHarvest == 'prompt' ) {
+		shouldProcessForHarvest = false;
 		shouldUploadToHarvest = false;
 		console.error("Need to refactor analyze a bit before can prompt for harvest upload.");
 		process.exitCode = 1;
+	} else if( shouldUploadToHarvest == 'dry-run' ) {
+		shouldProcessForHarvest = true;
+		shouldUploadToHarvest = false;
+	} else {
+		shouldProcessForHarvest = shouldUploadToHarvest;
 	}
 }).then( () => {
-	if( !shouldUploadToHarvest ) return;
+	if( !shouldProcessForHarvest ) return;
 
 	// If this was overridden on the command line,
 	// then it will have been resolved to an absolute path.
@@ -314,6 +324,8 @@ processArgv( process.argv.slice(2) ).then( () => {
 		return Promise.reject(new Error(msg));
 	}
 	
+	if( !shouldUploadToHarvest ) return;
+
 	return readJsonFromFile('harvest-api.config.json').then( (config) => {
 		return new HarvestClient(config);
 	}).then( (harvestClient) => {
