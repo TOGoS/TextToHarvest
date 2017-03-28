@@ -105,7 +105,6 @@ function processArgv( argv ) {
 		} else if( (m = ignoreProjectCodesArgRegex.exec(arg)) ) {
 			let codes = m[1].split(',');
 			for( let c in codes ) {
-				console.log("Ignore "+codes[c]);
 				ignoreProjectCodes[codes[c]] = codes[c];
 			}
 		} else if( (m = projectCodeParserModuleArgRegex.exec(arg)) ) {
