@@ -55,9 +55,11 @@ const periodLineRegex = /^(\d+:\d+)\-(\d+:\d+)\t+(\S+)(?:\t+(.*))?(\s*\\)?$/;
 const continuationLineRegex = /^\t+(.*)(\s*\\)?$/;
 
 let ignoreProjectCodes = {};
+let regardProjectCodes = undefined;
 let shouldUploadToHarvest = false;
 let shouldProcessForHarvest = false;
 
+const regardProjectCodesArgRegex = /^--regard-project-codes=(.*)$/;
 const ignoreProjectCodesArgRegex = /^--ignore-project-codes=(.*)$/;
 const dateArgRegex = /^--date=(.*)/;
 const weekEndingRegex = /^--week-ending=(.*)/;
@@ -101,6 +103,12 @@ function processArgv( argv ) {
 			case 'dry-run': shouldUploadToHarvest = 'dry-run'; break;
 			default:
 				throw new Error("Invalid value for '--upload-to-harvest': '"+m[1]+"'");
+			}
+		} else if( (m = regardProjectCodesArgRegex.exec(arg)) ) {
+			let codes = m[1].split(',');
+			if( regardProjectCodes == undefined ) regardProjectCodes = {};
+			for( let c in codes ) {
+				regardProjectCodes[codes[c]] = codes[c];
 			}
 		} else if( (m = ignoreProjectCodesArgRegex.exec(arg)) ) {
 			let codes = m[1].split(',');
@@ -228,6 +236,9 @@ processArgv( process.argv.slice(2) ).then( () => {
 }).then( () => {
 	entries = entries.filter( (entry) => {
 		let projectCodeParts = entry.projectCode.split('/');
+		if( regardProjectCodes != undefined ) {
+			if( !regardProjectCodes[entry.projectCode] && !regardProjectCodes[projectCodeParts[0]] ) return false;
+		}
 		if( ignoreProjectCodes[entry.projectCode] || ignoreProjectCodes[projectCodeParts[0]] ) return false;
 		return true;
 	});
