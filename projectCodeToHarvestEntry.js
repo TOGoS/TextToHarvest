@@ -11,6 +11,10 @@ module.exports.default = function( name ) {
 		projectId: 12642303,
 		taskId: 1918572
 	};
+	case 'align/ep/deploy': return {
+		projectId: 12642303,
+		taskId: 1918604
+	};
 	case 'earthit/pdficate/dev': return {
 		projectId: 13156258,
 		taskId: 1918572,
@@ -23,7 +27,7 @@ module.exports.default = function( name ) {
 		projectId: 3257319,
 		taskId: 1920926
 	};
-	case 'earthit/phrebar': return {
+	case 'earthit/phrebar': case 'earthit/phrebar/dev': return {
 		projectId: 9686850,
 		taskId: 5304076
 	};
