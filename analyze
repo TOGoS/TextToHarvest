@@ -253,7 +253,8 @@ processArgv( process.argv.slice(2) ).then( () => {
 		if( byDate[entry.dateCode] == undefined ) byDate[entry.dateCode] = {
 			entries: [],
 			totalHours: 0,
-			hoursByProjectCode: {}
+			hoursByProjectCode: {},
+			notesByProjectCode: {},
 		};
 		let day = byDate[entry.dateCode];
 		let hours = (entry.endTime - entry.startTime) / 3600000;
@@ -261,6 +262,12 @@ processArgv( process.argv.slice(2) ).then( () => {
 		day.entries.push(entry);
 		day.hoursByProjectCode[entry.projectCode] = (day.hoursByProjectCode[entry.projectCode] || 0) + hours;
 		totalHoursByProjectCode[entry.projectCode] = (totalHoursByProjectCode[entry.projectCode] || 0) + hours;
+		if( day.notesByProjectCode[entry.projectCode] == undefined ) {
+			day.notesByProjectCode[entry.projectCode] = [];
+		}
+		if( entry.notes && entry.notes.length > 0 ) {
+			day.notesByProjectCode[entry.projectCode].push(entry.notes);
+		}
 		totalHours += hours;
 	}
 	//console.log(JSON.stringify(byDate, null, "\t"));
@@ -268,7 +275,12 @@ processArgv( process.argv.slice(2) ).then( () => {
 		let day = byDate[date];
 		console.log(date+": total: "+padLeft(day.totalHours.toFixed(2), 5, " ")+" hours");
 		for( let projectCode in day.hoursByProjectCode ) {
-			console.log("    "+padRight(projectCode, 30, " ")+": "+padLeft(day.hoursByProjectCode[projectCode], 5, " ")+" hours");
+			let notes = day.notesByProjectCode[projectCode];
+			let notesStr = "";
+			if( notes.length > 0 ) {
+				notesStr = "  "+notes.join("  ");
+			}
+			console.log("    "+padRight(projectCode, 30, " ")+": "+padLeft(day.hoursByProjectCode[projectCode].toFixed(2), 5, " ")+" hours"+notesStr);
 		}
 	}
 	for( let projectCode in totalHoursByProjectCode ) {
