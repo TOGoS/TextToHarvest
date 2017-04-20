@@ -142,8 +142,8 @@ const projectCodeParserModuleArgRegex = /^--project-code-parser-module=(.*)$/;
 
 const dateLineRegex = /^=\s+(\d+\-\d\d\-\d\d)/;
 const lineIsPeriodRegex = /^(\d+:\d+)\-/;
-const periodLineRegex = /^(\d+:\d+)\-(\d+:\d+)\t+(\S+)(?:\t+(.*))?(\s*\\)?$/;
-const continuationLineRegex = /^\t+(.*)(\s*\\)?$/;
+const periodLineRegex = /^(\d+:\d+)\-(\d+:\d+)\t+(\S+)(?:\t+(.*?))?(\s*\\)?$/;
+const continuationLineRegex = /^\t+(.*?)(\s*\\)?$/;
 
 // Options
 
@@ -161,7 +161,6 @@ let targetEndDate = undefined;
 
 let validationErrors = [];
 let entries = [];
-let currentEntry = {};
 let previousLineContinued = false;
 
 let args = process.argv.slice(2);
@@ -265,7 +264,7 @@ processArgv( process.argv.slice(2) ).then( () => {
 						return;
 					}
 					
-					currentEntry.notes += " "+m[1].trim();
+					processingEntry.notes += " "+m[1].trim();
 					previousLineContinued = m[2] != undefined;
 					return;
 				}
