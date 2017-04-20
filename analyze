@@ -4,6 +4,7 @@
 const HarvestClient = require('./HarvestClient').default;
 let projectCodeParserModulePath = './projectCodeToHarvestEntry';
 const readJsonFromFile = require('./readJsonFromFile').default;
+const readline = require('readline');
 
 function padLeft( string, targetLength, padChar ) {
 	while( string.length < targetLength ) string = padChar + string;
@@ -47,17 +48,85 @@ function dateToString() {
 	return date.getFullYear()+'-'+(date.getMonth()+1)+'-'+date.getDate();
 }
 
-const readline = require('readline');
+//// Summary printing
 
-const dateLineRegex = /^=\s+(\d+\-\d\d\-\d\d)/;
-const lineIsPeriodRegex = /^(\d+:\d+)\-/;
-const periodLineRegex = /^(\d+:\d+)\-(\d+:\d+)\t+(\S+)(?:\t+(.*))?(\s*\\)?$/;
-const continuationLineRegex = /^\t+(.*)(\s*\\)?$/;
+function csvEncode(v) {
+	v = (v == undefined ? "" : ""+v);
+	if( v.indexOf(',') != -1 || v.indexOf('"' || v.indexOf("\n")) != -1 ) {
+		return '"'+v.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')+'"';
+	} else {
+		return v;
+	}
+}
 
-let ignoreProjectCodes = {};
-let regardProjectCodes = undefined;
-let shouldUploadToHarvest = false;
-let shouldProcessForHarvest = false;
+function printCsvRow(row) {
+	console.log(row.map(csvEncode).join(","));
+}
+
+function printCsv(entries, includeHeader) {
+	if( includeHeader ) {
+		printCsvRow([
+			'date', 'hours', 'projectCode', 'notes'
+		])
+	}
+	for( let e in entries ) {
+		let entry = entries[e];
+		let hours = (entry.endTime - entry.startTime) / 3600000;
+		printCsvRow([
+			entry.dateCode, hours, entry.projectCode, entry.notes
+		]);
+	}
+}
+
+function printStandardSummary(entries) {
+	let byDate = {};
+	let totalHours = 0;
+	let totalHoursByDate = {};
+	let totalHoursByProjectCode = {};
+	for( let e in entries ) {
+		let entry = entries[e];
+		
+		if( byDate[entry.dateCode] == undefined ) byDate[entry.dateCode] = {
+			entries: [],
+			totalHours: 0,
+			hoursByProjectCode: {},
+			notesByProjectCode: {},
+		};
+		let day = byDate[entry.dateCode];
+		let hours = (entry.endTime - entry.startTime) / 3600000;
+		day.totalHours += hours;
+		day.entries.push(entry);
+		day.hoursByProjectCode[entry.projectCode] = (day.hoursByProjectCode[entry.projectCode] || 0) + hours;
+		totalHoursByProjectCode[entry.projectCode] = (totalHoursByProjectCode[entry.projectCode] || 0) + hours;
+		if( day.notesByProjectCode[entry.projectCode] == undefined ) {
+			day.notesByProjectCode[entry.projectCode] = [];
+		}
+		if( entry.notes && entry.notes.length > 0 ) {
+			day.notesByProjectCode[entry.projectCode].push(entry.notes);
+		}
+		totalHours += hours;
+	}
+	//console.log(JSON.stringify(byDate, null, "\t"));
+	for( let date in byDate ) {
+		let day = byDate[date];
+		console.log(date+": total: "+padLeft(day.totalHours.toFixed(2), 5, " ")+" hours");
+		for( let projectCode in day.hoursByProjectCode ) {
+			let notes = day.notesByProjectCode[projectCode];
+			let notesStr = "";
+			if( notes.length > 0 ) {
+				notesStr = "  "+notes.join("  ");
+			}
+			console.log("    "+padRight(projectCode, 30, " ")+": "+padLeft(day.hoursByProjectCode[projectCode].toFixed(2), 5, " ")+" hours"+notesStr);
+		}
+	}
+	for( let projectCode in totalHoursByProjectCode ) {
+		console.log("Total for "+padRight(projectCode, 30, " ")+": "+padLeft(totalHoursByProjectCode[projectCode].toFixed(2), 5, " "));
+	}
+	console.log("Total: "+totalHours);
+}
+
+
+// Argument parsing regexes (TODO: rename all to *ArgRegex)
 
 const regardProjectCodesArgRegex = /^--regard-project-codes=(.*)$/;
 const ignoreProjectCodesArgRegex = /^--ignore-project-codes=(.*)$/;
@@ -65,15 +134,33 @@ const dateArgRegex = /^--date=(.*)/;
 const weekEndingRegex = /^--week-ending=(.*)/;
 const startDateRegex = /^--start-date=(.*)/;
 const endDateRegex = /^--end-date=(.*)/;
+const summaryFormatArgRegex = /^--summary-format=(.*)$/;
 const uploadToHarvestRegex = /^--upload-to-harvest=(.*)$/;
 const projectCodeParserModuleArgRegex = /^--project-code-parser-module=(.*)$/;
 
+// Timelog parsing regexex
+
+const dateLineRegex = /^=\s+(\d+\-\d\d\-\d\d)/;
+const lineIsPeriodRegex = /^(\d+:\d+)\-/;
+const periodLineRegex = /^(\d+:\d+)\-(\d+:\d+)\t+(\S+)(?:\t+(.*))?(\s*\\)?$/;
+const continuationLineRegex = /^\t+(.*)(\s*\\)?$/;
+
+// Options
+
+let summaryFormat = 'standard';
+let shouldIncludeHeaderWithCsvSummary = true;
+let ignoreProjectCodes = {};
+let regardProjectCodes = undefined;
+let shouldUploadToHarvest = false;
+let shouldProcessForHarvest = false;
 let inputFiles = [];
 let targetStartDate = undefined;
 let targetEndDate = undefined;
+
+// Processing result
+
 let validationErrors = [];
 let entries = [];
-
 let currentEntry = {};
 let previousLineContinued = false;
 
@@ -93,6 +180,16 @@ function processArgv( argv ) {
 			targetEndDate = parseDate(m[1]);
 		} else if( (m = startDateRegex.exec(arg)) ) {
 			targetStartDate = parseDate(m[1]);
+		} else if( (m = summaryFormatArgRegex.exec(arg)) ) {
+			switch( m[1] ) {
+			case 'none': case 'csv': case 'standard':
+				summaryFormat = m[1];
+				break;
+			default:
+				throw new Error("Unrecognized summary format: '"+m[1]+"'");
+			}
+		} else if( arg == '--dont-output-header' ) {
+			shouldIncludeHeaderWithCsvSummary = false;
 		} else if( arg == '--upload-to-harvest' ) {
 			shouldUploadToHarvest = true;
 		} else if( (m = uploadToHarvestRegex.exec(arg))) {
@@ -243,50 +340,11 @@ processArgv( process.argv.slice(2) ).then( () => {
 		return true;
 	});
 }).then( () => {
-	let byDate = {};
-	let totalHours = 0;
-	let totalHoursByDate = {};
-	let totalHoursByProjectCode = {};
-	for( let e in entries ) {
-		let entry = entries[e];
-		
-		if( byDate[entry.dateCode] == undefined ) byDate[entry.dateCode] = {
-			entries: [],
-			totalHours: 0,
-			hoursByProjectCode: {},
-			notesByProjectCode: {},
-		};
-		let day = byDate[entry.dateCode];
-		let hours = (entry.endTime - entry.startTime) / 3600000;
-		day.totalHours += hours;
-		day.entries.push(entry);
-		day.hoursByProjectCode[entry.projectCode] = (day.hoursByProjectCode[entry.projectCode] || 0) + hours;
-		totalHoursByProjectCode[entry.projectCode] = (totalHoursByProjectCode[entry.projectCode] || 0) + hours;
-		if( day.notesByProjectCode[entry.projectCode] == undefined ) {
-			day.notesByProjectCode[entry.projectCode] = [];
-		}
-		if( entry.notes && entry.notes.length > 0 ) {
-			day.notesByProjectCode[entry.projectCode].push(entry.notes);
-		}
-		totalHours += hours;
+	switch( summaryFormat ) {
+	case 'none': break;
+	case 'standard': printStandardSummary(entries); break;
+	case 'csv': printCsv(entries, shouldIncludeHeaderWithCsvSummary); break;
 	}
-	//console.log(JSON.stringify(byDate, null, "\t"));
-	for( let date in byDate ) {
-		let day = byDate[date];
-		console.log(date+": total: "+padLeft(day.totalHours.toFixed(2), 5, " ")+" hours");
-		for( let projectCode in day.hoursByProjectCode ) {
-			let notes = day.notesByProjectCode[projectCode];
-			let notesStr = "";
-			if( notes.length > 0 ) {
-				notesStr = "  "+notes.join("  ");
-			}
-			console.log("    "+padRight(projectCode, 30, " ")+": "+padLeft(day.hoursByProjectCode[projectCode].toFixed(2), 5, " ")+" hours"+notesStr);
-		}
-	}
-	for( let projectCode in totalHoursByProjectCode ) {
-		console.log("Total for "+padRight(projectCode, 30, " ")+": "+padLeft(totalHoursByProjectCode[projectCode].toFixed(2), 5, " "));
-	}
-	console.log("Total: "+totalHours);
 }).then( () => {
 	if( validationErrors.length > 0 ) {
 		console.error();
