@@ -19,7 +19,7 @@ module.exports.default = function( name ) {
 		projectId: 13156258,
 		taskId: 1918572,
 	};
-	case 'earthit/fssk': return {
+	case 'earthit/fssk': case 'earthit/fssk/dev': case 'earthit/fssk/meet': return {
 		projectId: 9686850,
 		taskId: 6977423
 	};
