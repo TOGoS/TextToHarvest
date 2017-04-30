@@ -48,6 +48,10 @@ module.exports.default = function( name ) {
 		projectId: 9680979,
 		taskId: 5295785
 	};
+	case 'trimble/advisor/dev': return {
+		projectId: 12865958, // 'Usagi Q1' - may need to be updated over time, which is annoying.
+		taskId: 1918572
+	};
 	} // endo el switcho
 
 	if( (m = /^unbillable\b/.exec(name)) ) return null;
