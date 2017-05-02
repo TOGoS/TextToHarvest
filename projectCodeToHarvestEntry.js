@@ -1,8 +1,11 @@
 "use strict";
 
+// TODO: Make this take a date.
+// Some projects change over time where we're supposed to bill hours to.
 module.exports.default = function( name ) {
 	let m;
 	switch( name ) {
+		/*
 	case 'align/ep/meet': return {
 		projectId: 12642303,
 		taskId: 2909951
@@ -15,6 +18,35 @@ module.exports.default = function( name ) {
 		projectId: 12642303,
 		taskId: 1918604
 	};
+	*/
+
+	case 'align/ep/code-review': return {
+		projectId: 13819525,
+		taskId: 5325193
+	};
+	case 'align/ep/deploy': return {
+		projectId: 13819525,
+		taskId: 1918604
+	};
+	case 'align/ep/ui-design': return {
+		projectId: 13819525,
+		taskId: 1918598
+	};
+	case 'align/ep/project-management': return {
+		projectId: 13819525,
+		taskId: 1918572
+	};
+	case 'align/ep/qa': return {
+		projectId: 13819525,
+		taskId: 2005127
+	};
+	// Some other stuff blah
+	case 'align/ep/meet': return {
+		projectId: 13819525,
+		taskId: 2909951
+	};
+
+	
 	case 'earthit/pdficate/dev': return {
 		projectId: 13156258,
 		taskId: 1918572,
