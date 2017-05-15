@@ -20,6 +20,7 @@ module.exports.default = function( name ) {
 	};
 	*/
 
+	/*
 	case 'align/ep/code-review': return {
 		projectId: 13819525,
 		taskId: 5325193
@@ -45,7 +46,24 @@ module.exports.default = function( name ) {
 		projectId: 13819525,
 		taskId: 2909951
 	};
-
+	*/
+	
+	case 'align/ep/meet': return {
+		projectId: 13819460,
+		taskId: 2909951
+	};
+	case 'align/ep/sprint-grooming': return {
+		projectId: 13819460,
+		taskId: 2909950
+	};
+	case 'align/ep/dev': return {
+		projectId: 13819460,
+		taskId: 1918572
+	};
+	case 'align/ep/deploy': return {
+		projectId: 13819460,
+		taskId: 1918572
+	};
 	
 	case 'earthit/pdficate/dev': return {
 		projectId: 13156258,
@@ -88,7 +106,7 @@ module.exports.default = function( name ) {
 
 	if( (m = /^unbillable\b/.exec(name)) ) return null;
 	if( (m = /^align\/ep\/(EMPENGAGE-\d+)$/.exec(name)) ) return {
-		projectId: 12642303,
+		projectId: 13819460,
 		taskId: 1918572,
 		notes: m[1],
 		link: "https://earthling.atlassian.net/browse/"+m[1]
