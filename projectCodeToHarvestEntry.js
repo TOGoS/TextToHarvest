@@ -48,9 +48,18 @@ module.exports.default = function( name ) {
 	};
 	*/
 	
-	case 'align/ep/meet': return {
+	case 'align/first30/dev': return {
+		projectId: 13819525,
+		taskId: 1918572
+	};
+
+	case 'align/ep/meet': case 'align/ep/scrum-meet': return {
 		projectId: 13819460,
 		taskId: 2909951
+	};
+	case 'align/ep/requirements': return {
+		projectId: 13819460,
+		taskId: 1918566
 	};
 	case 'align/ep/sprint-grooming': return {
 		projectId: 13819460,
@@ -67,7 +76,7 @@ module.exports.default = function( name ) {
 	
 	case 'earthit/pdficate/dev': return {
 		projectId: 13156258,
-		taskId: 1918572,
+		taskId: 1918572
 	};
 	case 'earthit/fssk': case 'earthit/fssk/dev': case 'earthit/fssk/meet': return {
 		projectId: 9686850,
@@ -97,6 +106,15 @@ module.exports.default = function( name ) {
 	case 'earthit/non-billable-healthcare-proposals/meeting': return {
 		projectId: 9680979,
 		taskId: 5295785
+	};
+	case 'earthit/interview': return {
+		projectId: 3257319,
+		taskId: 1920933
+	};
+
+	case 'lls/dev': return {
+		projectId: 11154825,
+		taskId: 1918572
 	};
 	case 'trimble/advisor/dev': return {
 		projectId: 12865958, // 'Usagi Q1' - may need to be updated over time, which is annoying.
