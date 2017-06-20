@@ -113,8 +113,12 @@ module.exports.default = function( name ) {
 	};
 
 	case 'lls/dev': return {
-		projectId: 11154825,
+		projectId: 13791662,
 		taskId: 1918572
+	};
+	case 'lls/backup': return {
+		projectId: 13791662,
+		taskId: 1918604 // That's 'deployment'
 	};
 	case 'trimble/advisor/dev': return {
 		projectId: 12865958, // 'Usagi Q1' - may need to be updated over time, which is annoying.
@@ -123,6 +127,12 @@ module.exports.default = function( name ) {
 	} // endo el switcho
 
 	if( (m = /^unbillable\b/.exec(name)) ) return null;
+	if( (m = /^align\/engage\/(ALIGN-\d+)$/.exec(name)) ) return {
+		projectId: 13819525,
+		taskId: 1918572,
+		notes: m[1],
+		link: "https://earthling.atlassian.net/browse/"+m[1]
+	};
 	if( (m = /^align\/ep\/(EMPENGAGE-\d+)$/.exec(name)) ) return {
 		projectId: 13819460,
 		taskId: 1918572,
