@@ -294,6 +294,15 @@ processArgv( process.argv.slice(2) ).then( () => {
 				
 				if( lineIsPeriodRegex.exec(line) ) {
 					m = periodLineRegex.exec(line);
+					if( processingDate == null ) {
+						validationErrors.push({
+							filename,
+							lineNumber,
+							typeCode: "dateless-period",
+							message: "Period line without date"
+						});
+						return;
+					}
 					
 					if( !m ) {
 						validationErrors.push({
