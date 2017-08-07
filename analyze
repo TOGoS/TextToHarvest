@@ -53,7 +53,7 @@ function dateToString() {
 function csvEncode(v) {
 	v = (v == undefined ? "" : ""+v);
 	if( v.indexOf(',') != -1 || v.indexOf('"' || v.indexOf("\n")) != -1 ) {
-		return '"'+v.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')+'"';
+		return '"'+v.replace(/"/g, '""')+'"';
 	} else {
 		return v;
 	}
