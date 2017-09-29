@@ -136,6 +136,7 @@ if( require.main == module ) {
 	let m;
 	let date = new Date();
 	let mode = "show-daily";
+	let harvestApiConfigFile = 'harvest-api.config.json';
 	for( let i=0; i<process.argv.length; ++i ) {
 		let arg = process.argv[i];
 		if( arg == '--show-daily' ) {
@@ -144,10 +145,12 @@ if( require.main == module ) {
 			mode = 'update-daily'
 		} else if( (m = /^--date=(.*)/.exec(arg)) ) {
 			date = new Date(Date.parse(m[1]));
+		} else if( (m = /^--harvest-api-config=(.*)/.exec(arg)) ) {
+			harvestApiConfigFile = m[1];
 		}
 	}
 	const readJsonFromFile = require('./readJsonFromFile').default;
-	readJsonFromFile('harvest-api.config.json').then( (config) => {
+	readJsonFromFile(harvestApiConfigFile).then( (config) => {
 		return new HarvestClient(config);
 	}).then( (client) => {
 		if( mode == 'show-daily' ) {

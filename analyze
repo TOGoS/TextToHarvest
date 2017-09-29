@@ -2,6 +2,7 @@
 "use strict";
 
 const HarvestClient = require('./HarvestClient').default;
+let harvestApiConfigFile = 'harvest-api.config.json';
 let projectCodeParserModulePath = './projectCodeToHarvestEntry';
 const readJsonFromFile = require('./readJsonFromFile').default;
 const readline = require('readline');
@@ -137,6 +138,7 @@ const endDateRegex = /^--end-date=(.*)/;
 const summaryFormatArgRegex = /^--summary-format=(.*)$/;
 const uploadToHarvestRegex = /^--upload-to-harvest=(.*)$/;
 const projectCodeParserModuleArgRegex = /^--project-code-parser-module=(.*)$/;
+const harvestApiConfigFileArgRegex = /^--harvest-api-config=(.*)$/;
 
 // Timelog parsing regexex
 
@@ -213,6 +215,8 @@ function processArgv( argv ) {
 			}
 		} else if( (m = projectCodeParserModuleArgRegex.exec(arg)) ) {
 			projectCodeParserModulePath = require('path').resolve(m[1]);
+		} else if( (m = harvestApiConfigFileArgRegex.exec(arg)) ) {
+			harvestApiConfigFile = m[1];
 		} else if( arg.length > 0 && (arg[0] != '-' || arg == '-') ) {
 			inputFiles.push(arg);
 		} else {
@@ -417,7 +421,7 @@ processArgv( process.argv.slice(2) ).then( () => {
 	
 	if( !shouldUploadToHarvest ) return;
 
-	return readJsonFromFile('harvest-api.config.json').then( (config) => {
+	return readJsonFromFile(harvestApiConfigFile).then( (config) => {
 		return new HarvestClient(config);
 	}).then( (harvestClient) => {
 		let updateProm = Promise.resolve();
