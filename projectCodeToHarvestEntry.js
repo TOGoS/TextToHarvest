@@ -47,7 +47,12 @@ module.exports.default = function( name ) {
 		taskId: 2909951
 	};
 	*/
-	
+
+	case 'activlife/dev': return {
+		projectId: 14866410,
+		taskId: 1918572
+	};
+	   
 	case 'align/first30/dev': return {
 		projectId: 13819525,
 		taskId: 1918572
@@ -115,6 +120,10 @@ module.exports.default = function( name ) {
 		projectId: 3257319,
 		taskId: 1920933
 	};
+	case 'earthit/hr-internal': return {
+		projectId: 3257319,
+		taskId: 1920930
+	};
 
 	case 'lls/dev': return {
 		projectId: 13791662,
@@ -124,8 +133,8 @@ module.exports.default = function( name ) {
 		projectId: 13791662,
 		taskId: 1918604 // That's 'deployment'
 	};
-	case 'trimble/advisor/dev': return {
-		projectId: 12865958, // 'Usagi Q1' - may need to be updated over time, which is annoying.
+	case 'trimble/usagi/dev': return {
+		projectId: 14595477, // 'Usagi Qx' - may need to be updated over time, which is annoying.
 		taskId: 1918572
 	};
 	} // endo el switcho
