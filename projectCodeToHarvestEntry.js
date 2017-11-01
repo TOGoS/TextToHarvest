@@ -154,6 +154,12 @@ module.exports.default = function( name ) {
 		notes: m[1],
 		link: "https://earthling.atlassian.net/browse/"+m[1]
 	};
+	if( (m = /^activlife\/(ALIFE-\d+)$/.exec(name)) ) return {
+		projectId: 14866410,
+		taskId: 1918572,
+		notes: m[1],
+		link: "https://earthling.atlassian.net/browse/"+m[1]
+	};
 	if( (m = /^align\/ep\/(EMPENGAGE-\d+)$/.exec(name)) ) return {
 		projectId: 13819460,
 		taskId: 1918572,
