@@ -52,11 +52,11 @@ module.exports.default = function( name ) {
 		projectId: 14866410,
 		taskId: 1918572
 	};
-	case 'activlife/meet': return {
+	case 'activlife/meet': case 'activlife/scrum-meeting': return {
 		projectId: 14866410,
 		taskId: 2909951,
 	};
-	case 'activlife/grooming': return {
+	case 'activlife/grooming': case 'activlife/sprint-grooming-meeting': return {
 		projectId: 14866410,
 		taskId: 2909950
 	};
