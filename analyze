@@ -142,7 +142,10 @@ function printCsv(entries, includeHeader) {
 	}
 }
 
-function printStandardSummary(entries) {
+function printStandardSummary(entries, period) {
+	console.log("Period: "+formatPeriod(period, formatDateWithDow));
+	console.log();
+
 	let byDate = {};
 	let totalHours = 0;
 	let totalHoursByDate = {};
@@ -174,7 +177,7 @@ function printStandardSummary(entries) {
 	//console.log(JSON.stringify(byDate, null, "\t"));
 	for( let date in byDate ) {
 		let day = byDate[date];
-		console.log(date+": total: "+padLeft(day.totalHours.toFixed(2), 5, " ")+" hours");
+		console.log(formatDateWithDow(day.date)+": total: "+padLeft(day.totalHours.toFixed(2), 5, " ")+" hours");
 		for( let projectCode in day.hoursByProjectCode ) {
 			let notes = day.notesByProjectCode[projectCode];
 			let notesStr = "";
@@ -425,7 +428,7 @@ processArgv( process.argv.slice(2) ).then( () => {
 }).then( () => {
 	switch( summaryFormat ) {
 	case 'none': break;
-	case 'standard': printStandardSummary(entries); break;
+	case 'standard': printStandardSummary(entries, targetPeriod); break;
 	case 'csv': printCsv(entries, shouldIncludeHeaderWithCsvSummary); break;
 	}
 }).then( () => {
