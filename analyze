@@ -19,7 +19,7 @@ function padRight( string, targetLength, padChar ) {
 //// Date functions
 
 function parseDate( str ) {
-	return new Date(Date.parse(str+'T00:00:00+06:00'));
+	return new Date(Date.parse(str+'T00:00:00'));
 }
 function formatDate(date) {
 	return date.getFullYear()+'-'+(date.getMonth()+1)+'-'+date.getDate();
