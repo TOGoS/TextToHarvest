@@ -16,9 +16,31 @@ function padRight( string, targetLength, padChar ) {
 	return string;
 }
 
+//// Date functions
+
+function parseDate( str ) {
+	return new Date(Date.parse(str+'T00:00:00+06:00'));
+}
+function formatDate(date) {
+	return date.getFullYear()+'-'+(date.getMonth()+1)+'-'+date.getDate();
+}
+const dayOfWeekAbbreviations = ['U','M','T','W','R','F','S'];
+function formatDateWithDow(date) {
+	return formatDate(date)+' ('+dayOfWeekAbbreviations[date.getDay()]+')';
+}
+function formatPeriod(period, formatFunction) {
+	if( formatFunction == undefined ) formatFunction = formatDate;
+	let firstDayStr = period.firstDay == undefined ? "-∞" : formatFunction(period.firstDay);
+	let lastDayStr  = period.firstDay == undefined ? "+∞" : formatFunction(period.lastDay);
+	return firstDayStr+".."+lastDayStr;
+}
+
 function datePlusDays( date, days ) {
 	if( date == undefined ) {
 		throw new Error("Passed null fer date to datePlusDays");
+	}
+	if( typeof date == 'string' ) {
+		date = parseDate(date);
 	}
 	if( typeof date != 'object' ) {
 		throw new Error("Passed non-object fer date to datePlusDays: "+date);
@@ -27,6 +49,53 @@ function datePlusDays( date, days ) {
 	copy.setDate( date.getDate() + days );
 	return copy;
 }
+
+function singleDayPeriod( date ) {
+	return { firstDay: date, lastDay: date };
+}
+
+function weekEnding( date ) {
+	return {
+		firstDay: datePlusDays(date, -6),
+		lastDay: date,
+	};
+}
+
+function previousDate( date ) {
+	return datePlusDays(date, -1);
+}
+
+function isSaturday( date ) {
+	return date.getDay() == 6;
+}
+isSaturday.description = "is a saturday";
+
+function isLastDayOfMonth( date ) {
+	return datePlusDays(date, 1).getDate() == 1;
+}
+isLastDayOfMonth.description = "is the last day of a month";
+
+function latestDateWhere( filterFunc, currentDate, iterator ) {
+	if( currentDate == undefined ) currentDate = new Date();
+	if( iterator == undefined ) iterator = previousDate;
+	let attempts = 0;
+	let date = currentDate;
+	while( attempts < 1000 ) {
+		let x = filterFunc(date);
+		if( x != undefined && x != false ) return (typeof x == 'boolean' ? date : x);
+		date = iterator(date);
+		++attempts;
+	}
+	throw new Error("Failed to find date that "+filterFunc.description+" after "+attempts+" tries");
+}
+function getLastWeek( currentDate ) {
+	let mostRecentSaturday = latestDateWhere( isSaturday, currentDate );
+	return weekEnding(mostRecentSaturday);
+}
+function getLastMonth( currentDate ) {
+	return weekEnding(latestDateWhere( isLastDayOfMonth, currentDate ));
+}
+
 const hoursSecondsRegex = /^(\d+):(\d+)$/
 function datePlusTime( date, time ) {
 	if( date == undefined ) {
@@ -41,12 +110,6 @@ function datePlusTime( date, time ) {
 		time = parseInt(m[1])*60*60 + parseInt(m[2])*60;
 	}
 	return new Date(date.getTime() + time*1000);
-}
-function parseDate( str ) {
-	return new Date(Date.parse(str+'T00:00:00+06:00'));
-}
-function dateToString() {
-	return date.getFullYear()+'-'+(date.getMonth()+1)+'-'+date.getDate();
 }
 
 //// Summary printing
@@ -88,6 +151,7 @@ function printStandardSummary(entries) {
 		let entry = entries[e];
 		
 		if( byDate[entry.dateCode] == undefined ) byDate[entry.dateCode] = {
+			date: entry.date,
 			entries: [],
 			totalHours: 0,
 			hoursByProjectCode: {},
@@ -156,8 +220,10 @@ let regardProjectCodes = undefined;
 let shouldUploadToHarvest = false;
 let shouldProcessForHarvest = false;
 let inputFiles = [];
-let targetStartDate = undefined;
-let targetEndDate = undefined;
+let targetPeriod = {
+	firstDay: undefined,
+	lastDay: undefined
+};
 
 // Processing result
 
@@ -172,15 +238,17 @@ function processArgv( argv ) {
 		let arg = args[i];
 		let m;
 		if( (m = dateArgRegex.exec(arg)) ) {
-			targetStartDate = parseDate(m[1]);
-			targetEndDate = parseDate(m[1]);
+			targetPeriod = singleDayPeriod(parseDate(m[1]));
 		} else if( (m = weekEndingRegex.exec(arg)) ) {
-			targetEndDate = parseDate(m[1]);
-			targetStartDate = datePlusDays(targetEndDate, -6);
+			targetPeriod = weekEnding(m[1]);
 		} else if( (m = endDateRegex.exec(arg)) ) {
-			targetEndDate = parseDate(m[1]);
+			targetPeriod.lastDay = parseDate(m[1]);
 		} else if( (m = startDateRegex.exec(arg)) ) {
-			targetStartDate = parseDate(m[1]);
+			targetPeriod.firstDay = parseDate(m[1]);
+		} else if( arg == '--last-week' ) {
+			targetPeriod = getLastWeek();
+		} else if( arg == '--last-month' ) {
+			targetPeriod = getLastMonth();
 		} else if( (m = summaryFormatArgRegex.exec(arg)) ) {
 			switch( m[1] ) {
 			case 'none': case 'csv': case 'standard':
@@ -292,8 +360,8 @@ processArgv( process.argv.slice(2) ).then( () => {
 				}
 				
 				if(
-					(targetStartDate != undefined && processingDate < targetStartDate) ||
-					(targetEndDate != undefined && processingDate > targetEndDate)
+					(targetPeriod.firstDay != undefined && processingDate < targetPeriod.firstDay) ||
+					(targetPeriod.lastDay != undefined && processingDate > targetPeriod.lastDay)
 				) {
 					return; // Because we don't care!
 				}
@@ -332,6 +400,7 @@ processArgv( process.argv.slice(2) ).then( () => {
 					//let interval  = endTime - startTime;
 					
 					entries.push(processingEntry = {
+						date: processingDate,
 						dateCode: processingDateStr,
 						startTime, endTime,
 						projectCode, notes,
