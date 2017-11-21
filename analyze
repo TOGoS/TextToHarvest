@@ -38,6 +38,7 @@ function tzPostfix( offsetMinutes ) {
 const impliedTzPostfix = tzPostfix(impliedTzReferenceDate.getTimezoneOffset());
 
 function parseDate( str ) {
+	if( typeof str == 'object' ) return str; // Already a Date object, presumably
 	// "given an ISO format such as '2014-03-07' [Date.parse] will assume a time zone of UTC"
 	// -- Mozilla Date.parse documentation
 	// So we need to glom the implied local timezone in there
@@ -75,10 +76,12 @@ function datePlusDays( date, days ) {
 }
 
 function singleDayPeriod( date ) {
+	date = parseDate(date);
 	return { firstDay: date, lastDay: date };
 }
 
 function weekEnding( date ) {
+	date = parseDate(date);
 	return {
 		firstDay: datePlusDays(date, -6),
 		lastDay: date,
