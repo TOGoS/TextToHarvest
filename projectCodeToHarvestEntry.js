@@ -1,100 +1,41 @@
 "use strict";
 
+function projectNameToHarvestId( name ) {
+	switch( name ) {
+	case 'activlife':
+		return 14866410;
+	case 'align/ep':
+		return 13819460;
+	case 'align/first30': case 'align/engage':
+		return 13819525;
+	default:
+		return null; // as in idfk
+	}
+}
+
+function taskNameToHarvestId( name ) {
+	switch( name ) {
+	case 'dev': return 1918572;
+	case 'meet': case 'activlife/scrum-meeting':	return 2909951;
+	case 'sprint-grooming-meeting': return 2909950;
+	case 'sprint-review-meeting': return 7255926;
+	case 'code-review': return 5325193;
+	case 'requirements': return 1918566;
+	case 'project-management': return 1918577;
+	case 'testing': return 2005127;
+	case 'modeling': return 1918609;
+	case 'documentation': return 1919487;
+	case 'deployment': return 1918604;
+	default:
+		return null;
+	}
+}
+
 // TODO: Make this take a date.
 // Some projects change over time where we're supposed to bill hours to.
 module.exports.default = function( name ) {
 	let m;
 	switch( name ) {
-		/*
-	case 'align/ep/meet': return {
-		projectId: 12642303,
-		taskId: 2909951
-	};
-	case 'align/ep/dev': return {
-		projectId: 12642303,
-		taskId: 1918572
-	};
-	case 'align/ep/deploy': return {
-		projectId: 12642303,
-		taskId: 1918604
-	};
-	*/
-
-	/*
-	case 'align/ep/code-review': return {
-		projectId: 13819525,
-		taskId: 5325193
-	};
-	case 'align/ep/deploy': return {
-		projectId: 13819525,
-		taskId: 1918604
-	};
-	case 'align/ep/ui-design': return {
-		projectId: 13819525,
-		taskId: 1918598
-	};
-	case 'align/ep/project-management': return {
-		projectId: 13819525,
-		taskId: 1918572
-	};
-	case 'align/ep/qa': return {
-		projectId: 13819525,
-		taskId: 2005127
-	};
-	// Some other stuff blah
-	case 'align/ep/meet': return {
-		projectId: 13819525,
-		taskId: 2909951
-	};
-	*/
-
-	case 'activlife/dev': return {
-		projectId: 14866410,
-		taskId: 1918572
-	};
-	case 'activlife/meet': case 'activlife/scrum-meeting': return {
-		projectId: 14866410,
-		taskId: 2909951,
-	};
-	case 'activlife/grooming': case 'activlife/sprint-grooming-meeting': return {
-		projectId: 14866410,
-		taskId: 2909950
-	};
-	case 'activlife/sprint-review-meeting': return {
-		projectId: 14866410,
-		taskId: 7255926
-	};
-	
-	case 'align/first30/dev': return {
-		projectId: 13819525,
-		taskId: 1918572
-	};
-
-	case 'align/ep/meet': case 'align/ep/scrum-meet': return {
-		projectId: 13819460,
-		taskId: 2909951
-	};
-	case 'align/ep/requirements': return {
-		projectId: 13819460,
-		taskId: 1918566
-	};
-	case 'align/ep/sprint-grooming': return {
-		projectId: 13819460,
-		taskId: 2909950
-	};
-	case 'align/ep/dev': return {
-		projectId: 13819460,
-		taskId: 1918572
-	};
-	case 'align/ep/deploy': return {
-		projectId: 13819460,
-		taskId: 1918572
-	};
-	case 'align/ep/code-review': return {
-		projectId: 13819460,
-		taskId: 5325193
-	};
-	
 	case 'earthit/pdficate/dev': return {
 		projectId: 13156258,
 		taskId: 1918572
@@ -151,25 +92,29 @@ module.exports.default = function( name ) {
 	};
 	} // endo el switcho
 
+	if( (m = /^(.+)\/([^\/]+)$/.exec(name)) ) {
+		let projectId = projectNameToHarvestId(m[1]);
+		if( projectId != undefined ) {
+			let taskName = m[2];
+			let taskId = taskNameToHarvestId(taskName);
+			if( taskId != undefined ) {
+				return {
+					projectId,
+					taskId
+				};
+			}
+			if( /^([A-Z0-9]+)-(\d+)$/.exec(taskName) ) {
+				return {
+					projectId,
+					taskId: 1918572,
+					notes: taskName,
+					link: "https://earthling.atlassian.net/browse/"+taskName
+				};
+			}
+		}
+	}
+	
 	if( (m = /^unbillable\b/.exec(name)) ) return null;
-	if( (m = /^align\/engage\/(ALIGN-\d+)$/.exec(name)) ) return {
-		projectId: 13819525,
-		taskId: 1918572,
-		notes: m[1],
-		link: "https://earthling.atlassian.net/browse/"+m[1]
-	};
-	if( (m = /^activlife\/(ALIFE-\d+)$/.exec(name)) ) return {
-		projectId: 14866410,
-		taskId: 1918572,
-		notes: m[1],
-		link: "https://earthling.atlassian.net/browse/"+m[1]
-	};
-	if( (m = /^align\/ep\/(EMPENGAGE-\d+)$/.exec(name)) ) return {
-		projectId: 13819460,
-		taskId: 1918572,
-		notes: m[1],
-		link: "https://earthling.atlassian.net/browse/"+m[1]
-	};
 	
 	throw new Error("Unrecognized task: '"+name+"'");
 };
