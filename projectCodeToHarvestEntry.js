@@ -60,6 +60,10 @@ module.exports.default = function( name ) {
 		projectId: 14866410,
 		taskId: 2909950
 	};
+	case 'activlife/sprint-review-meeting': return {
+		projectId: 14866410,
+		taskId: 7255926
+	};
 	
 	case 'align/first30/dev': return {
 		projectId: 13819525,
