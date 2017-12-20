@@ -191,6 +191,7 @@ function printStandardSummary(entries, period) {
 	let totalHours = 0;
 	let totalHoursByDate = {};
 	let totalHoursByProjectCode = {};
+	let projectCodeFieldLength = 10;
 	for( let e in entries ) {
 		let entry = entries[e];
 		
@@ -207,6 +208,7 @@ function printStandardSummary(entries, period) {
 		day.entries.push(entry);
 		day.hoursByProjectCode[entry.projectCode] = (day.hoursByProjectCode[entry.projectCode] || 0) + hours;
 		totalHoursByProjectCode[entry.projectCode] = (totalHoursByProjectCode[entry.projectCode] || 0) + hours;
+		projectCodeFieldLength = Math.max(entry.projectCode.length, projectCodeFieldLength);
 		if( day.notesByProjectCode[entry.projectCode] == undefined ) {
 			day.notesByProjectCode[entry.projectCode] = [];
 		}
@@ -225,11 +227,11 @@ function printStandardSummary(entries, period) {
 			if( notes.length > 0 ) {
 				notesStr = "  "+notes.join("  ");
 			}
-			console.log("    "+padRight(projectCode, 30, " ")+": "+padLeft(day.hoursByProjectCode[projectCode].toFixed(2), 5, " ")+" hours"+notesStr);
+			console.log("    "+padRight(projectCode, projectCodeFieldLength, " ")+": "+padLeft(day.hoursByProjectCode[projectCode].toFixed(2), 5, " ")+" hours"+notesStr);
 		}
 	}
 	for( let projectCode in totalHoursByProjectCode ) {
-		console.log("Total for "+padRight(projectCode, 30, " ")+": "+padLeft(totalHoursByProjectCode[projectCode].toFixed(2), 5, " "));
+		console.log("Total for "+padRight(projectCode, projectCodeFieldLength, " ")+": "+padLeft(totalHoursByProjectCode[projectCode].toFixed(2), 5, " "));
 	}
 	console.log("Total: "+totalHours);
 }
