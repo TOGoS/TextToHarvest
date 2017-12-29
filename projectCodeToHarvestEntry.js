@@ -91,27 +91,32 @@ module.exports.default = function( name ) {
 		taskId: 1918572
 	};
 	} // endo el switcho
-
+	
+	// project/TICKET-123/task
+	if( (m = /^(.+)\/([A-Z0-9]+-\d+)(?:\/([^\/]+))?$/.exec(name)) ) {
+		let projectName = m[1];
+		let projectId = projectNameToHarvestId(projectName);
+		let ticketId = m[2];
+		let taskName = m[3] || 'dev';
+		let taskId = taskNameToHarvestId(taskName);
+		if( projectId != undefined && taskId != undefined ) return {
+			projectId,
+			taskId,
+			notes: ticketId,
+			link: "https://earthling.atlassian.net/browse/"+ticketId,
+		};
+	}
+	
+	// project/task
 	if( (m = /^(.+)\/([^\/]+)$/.exec(name)) ) {
-		let projectId = projectNameToHarvestId(m[1]);
-		if( projectId != undefined ) {
-			let taskName = m[2];
-			let taskId = taskNameToHarvestId(taskName);
-			if( taskId != undefined ) {
-				return {
-					projectId,
-					taskId
-				};
-			}
-			if( /^([A-Z0-9]+)-(\d+)$/.exec(taskName) ) {
-				return {
-					projectId,
-					taskId: 1918572,
-					notes: taskName,
-					link: "https://earthling.atlassian.net/browse/"+taskName
-				};
-			}
-		}
+		let projectName = m[1];
+		let projectId = projectNameToHarvestId(projectName);
+		let taskName = m[2];
+		let taskId = taskNameToHarvestId(taskName);
+		if( projectId != undefined && taskId != undefined ) return {
+			projectId,
+			taskId
+		};
 	}
 	
 	if( (m = /^unbillable\b/.exec(name)) ) return null;
