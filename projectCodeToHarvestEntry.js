@@ -8,8 +8,13 @@ function projectNameToHarvestId( name ) {
 		return 13819460;
 	case 'align/first30': case 'align/engage':
 		return 13819525;
-	case 'earthit/hc-overhead':
-		return 9683765; //5301998
+	case 'overhead/other':
+		return 9683800;
+	case 'overhead/healthcare':
+	case 'earthit/hc-overhead': // Don't use this one; use the other one.
+		return 9683765;
+	case 'overhead/geo':
+		return 9683714;
 	case 'trimble':
 		return 14595477; // 'Usagi 2017/2018'
 	default:
@@ -25,6 +30,7 @@ function taskNameToHarvestId( name ) {
 	case 'sprint-review-meeting': return 7255926;
 	case 'code-review': return 5325193;
 	case 'requirements': return 1918566;
+	case 'planning': return 5301998;
 	case 'project-management': return 1918577;
 	case 'testing': return 2005127;
 	case 'modeling': return 1918609;
