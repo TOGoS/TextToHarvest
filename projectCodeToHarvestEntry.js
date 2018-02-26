@@ -8,6 +8,10 @@ function projectNameToHarvestId( name ) {
 		return 13819460;
 	case 'align/first30': case 'align/engage':
 		return 13819525;
+	case 'earthit/hc-overhead':
+		return 9683765; //5301998
+	case 'trimble':
+		return 14595477; // 'Usagi 2017/2018'
 	default:
 		return null; // as in idfk
 	}
@@ -26,6 +30,8 @@ function taskNameToHarvestId( name ) {
 	case 'modeling': return 1918609;
 	case 'documentation': return 1919487;
 	case 'deployment': return 1918604;
+	case 'overhead': return 5301999;
+	case 'planning': return 5301998;
 	default:
 		return null;
 	}
