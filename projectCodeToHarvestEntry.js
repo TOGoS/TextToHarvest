@@ -30,6 +30,7 @@ function taskNameToHarvestId( name ) {
 	case 'sprint-review-meeting': return 7255926;
 	case 'code-review': return 5325193;
 	case 'requirements': return 1918566;
+	case 'support': return 1918590;
 	case 'planning': return 5301998;
 	case 'project-management': return 1918577;
 	case 'testing': return 2005127;
