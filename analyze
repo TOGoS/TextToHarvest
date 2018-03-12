@@ -46,8 +46,23 @@ function parseDate( str ) {
 	// So we need to glom the implied local timezone in there
 	// to make sure that dates are parsed according to the local timezone,
 	// which we assume for all of our comparisons and formatting.
+	// Set hour to 12 to
+	// (A) make it more clear that this Date represents the whole day,
+	//     not just an instant at the beginning, and
+	// (B) prevent rounding problems around DST transitions.
 	return new Date(Date.parse(str+'T00:00:00'+impliedTzPostfix));
+	// Or maybe timezone doesn't matter
+	// so long as we're consistent,
+	// since we only care about calendar dates and spans of time
+	//return new Date(Date.parse(str+'T12:00:00Z'));
 }
+
+function getCurrentDate() {
+	 // If doing timezone shenanigans,
+	 // may want to do some transformation here.
+	 return new Date();
+}
+
 function formatDate(date) {
 	return date.getFullYear() + '-' +
 		padLeft(date.getMonth()+1, 2, '0') + '-' +
@@ -113,7 +128,7 @@ function isLastDayOfMonth( date ) {
 isLastDayOfMonth.description = "is the last day of a month";
 
 function latestDateWhere( filterFunc, currentDate, iterator ) {
-	if( currentDate == undefined ) currentDate = new Date();
+	if( currentDate == undefined ) currentDate = getCurrentDate();
 	if( iterator == undefined ) iterator = previousDate;
 	let attempts = 0;
 	let date = currentDate;
