@@ -20,8 +20,6 @@ function padRight( string, targetLength, padChar ) {
 
 //// Date functions
 
-const impliedTzReferenceDate = new Date();
-
 /**
  * @param offsetMinutes 'difference, in minutes, between UTC and local time'
  *   i.e. positive when local timezone is 'behind' UTC.
@@ -37,9 +35,33 @@ function tzPostfix( offsetMinutes ) {
 		padLeft(tzMinutes, 2, '0');
 }
 
+const EARLY_HOUR = 6;
+const MID_HOUR = 12;
+const LATE_HOUR = 18;
+
+// Use to represent the beginning of a period
+function earlyDate( date ) {
+	let d = new Date(date);
+	d.setHours(EARLY_HOUR);
+	return d;
+}
+// Use to represent a point in time
+function midDate( date ) {
+	let d = new Date(date);
+	d.setHours(MID_HOUR);
+	return d;
+}
+// Use to represent the end of a period
+function lateDate( date ) {
+	let d = new Date(date);
+	d.setHours(LATE_HOUR);
+	return d;
+}
+
+const impliedTzReferenceDate = new Date();
 const impliedTzPostfix = tzPostfix(impliedTzReferenceDate.getTimezoneOffset());
 
-function parseDate( str ) {
+function parseDate( str, hour ) {
 	if( typeof str == 'object' ) return str; // Already a Date object, presumably
 	// "given an ISO format such as '2014-03-07' [Date.parse] will assume a time zone of UTC"
 	// -- Mozilla Date.parse documentation
@@ -50,17 +72,16 @@ function parseDate( str ) {
 	// (A) make it more clear that this Date represents the whole day,
 	//     not just an instant at the beginning, and
 	// (B) prevent rounding problems around DST transitions.
-	return new Date(Date.parse(str+'T00:00:00'+impliedTzPostfix));
-	// Or maybe timezone doesn't matter
-	// so long as we're consistent,
-	// since we only care about calendar dates and spans of time
-	//return new Date(Date.parse(str+'T12:00:00Z'));
+	if( hour == undefined ) hour = 12;
+	let d = new Date(Date.parse(str+'T12:00:00'+impliedTzPostfix));
+	d.setHours(hour);
+	return d;
 }
 
 function getCurrentDate() {
-	 // If doing timezone shenanigans,
-	 // may want to do some transformation here.
-	 return new Date();
+	// If doing timezone shenanigans,
+	// may want to do some transformation here.
+	return midDate(new Date());
 }
 
 function formatDate(date) {
@@ -91,37 +112,52 @@ function datePlusDays( date, days ) {
 	}
 	let copy = new Date(date);
 	copy.setDate( date.getDate() + days );
+	copy.setHours( date.getHours() );
 	return copy;
+}
+
+function fixPeriod( period ) {
+	return {
+		firstDay: earlyDate(period.firstDay),
+		lastDay: lateDate(period.lastDay),
+	};
 }
 
 function singleDayPeriod( date ) {
 	date = parseDate(date);
-	return { firstDay: date, lastDay: date };
+	return fixPeriod({ firstDay: date, lastDay: date });
 }
 
 function weekStarting( date ) {
 	date = parseDate(date);
-	return {
+	return fixPeriod({
 		firstDay: date,
 		lastDay: datePlusDays(date, 6),
-	};
+	});
 }
 function weekEnding( date ) {
 	date = parseDate(date);
-	return {
+	return fixPeriod({
 		firstDay: datePlusDays(date, -6),
 		lastDay: date,
-	};
+	});
 }
 
 function previousDate( date ) {
 	return datePlusDays(date, -1);
+}
+function nextDate( date ) {
+	return datePlusDays(date, +1);
 }
 
 function isSaturday( date ) { return date.getDay() == 6; }
 function isSunday( date ) { return date.getDay() == 0; }
 isSaturday.description = "is a saturday";
 
+function isFirstDayOfMonth( date ) {
+	return date.getDate() == 1;
+}
+isFirstDayOfMonth.description = "is the first day of the month";
 function isLastDayOfMonth( date ) {
 	return datePlusDays(date, 1).getDate() == 1;
 }
@@ -148,8 +184,15 @@ function getThisWeek( currentDate ) {
 	let mostRecentSunday = latestDateWhere( isSunday, currentDate );
 	return weekStarting(mostRecentSunday);
 }
+function getMonthOf( date ) {
+	let lastDay = latestDateWhere( isLastDayOfMonth, date, nextDate );
+	let firstDay = latestDateWhere( isFirstDayOfMonth, date );
+	return fixPeriod({ firstDay, lastDay });
+}
 function getLastMonth( currentDate ) {
-	return weekEnding(latestDateWhere( isLastDayOfMonth, currentDate ));
+	let lastDay = latestDateWhere( isLastDayOfMonth, currentDate );
+	let firstDay = latestDateWhere( isFirstDayOfMonth, lastDay );
+	return fixPeriod({ firstDay, lastDay });
 }
 
 const hoursSecondsRegex = /^(\d+):(\d+)$/
@@ -258,6 +301,7 @@ const regardProjectCodesArgRegex = /^--regard-project-codes=(.*)$/;
 const ignoreProjectCodesArgRegex = /^--ignore-project-codes=(.*)$/;
 const dateArgRegex = /^--date=(.*)/;
 const weekEndingRegex = /^--week-ending=(.*)/;
+const monthOfRegex = /^--month-of=(.*)/;
 const startDateRegex = /^--start-date=(.*)/;
 const endDateRegex = /^--end-date=(.*)/;
 const summaryFormatArgRegex = /^--summary-format=(.*)$/;
@@ -303,13 +347,15 @@ function processArgv( argv ) {
 		} else if( (m = weekEndingRegex.exec(arg)) ) {
 			targetPeriod = weekEnding(m[1]);
 		} else if( (m = endDateRegex.exec(arg)) ) {
-			targetPeriod.lastDay = parseDate(m[1]);
+			targetPeriod.lastDay = parseDate(m[1], LATE_HOUR);
 		} else if( (m = startDateRegex.exec(arg)) ) {
-			targetPeriod.firstDay = parseDate(m[1]);
+			targetPeriod.firstDay = parseDate(m[1], EARLY_HOUR);
 		} else if( arg == '--last-week' ) {
 			targetPeriod = getLastWeek();
 		} else if( arg == '--this-week' ) {
 			targetPeriod = getThisWeek();
+		} else if( (m = monthOfRegex.exec(arg)) ) {
+			targetPeriod = getMonthOf(parseDate(m[1]));
 		} else if( arg == '--last-month' ) {
 			targetPeriod = getLastMonth();
 		} else if( (m = summaryFormatArgRegex.exec(arg)) ) {
@@ -356,6 +402,7 @@ function processArgv( argv ) {
 			return Promise.reject(new Error("Unrecognized argument: '"+arg+"'"));
 		}
 	}
+	//console.log("Target period", targetPeriod)
 	return Promise.resolve();
 };
 
