@@ -4,10 +4,14 @@ function projectNameToHarvestId( name ) {
 	switch( name ) {
 	case 'activlife':
 		return 14866410;
+	case 'align/pcc-etl':
+		return 16684943;
 	case 'align/ep':
 		return 13819460;
 	case 'align/first30': case 'align/engage':
 		return 13819525;
+	case 'lls':
+		return 17040925;
 	case 'overhead/other':
 		return 9683800;
 	case 'overhead/healthcare':
@@ -49,11 +53,6 @@ function taskNameToHarvestId( name ) {
 module.exports.default = function( name ) {
 	let m;
 	switch( name ) {
-	case 'align/pcc-etl/dev': return {
-		projectId: 16684943,
-		taskId: 1918572,
-		link: "https://earthling.atlassian.net/browse/EMPENGAGE-554"
-	};
 	case 'earthit/pdficate/dev': return {
 		projectId: 13156258,
 		taskId: 1918572
@@ -61,6 +60,10 @@ module.exports.default = function( name ) {
 	case 'earthit/fssk': case 'earthit/fssk/dev': case 'earthit/fssk/meet': return {
 		projectId: 9686850,
 		taskId: 6977423
+	};
+	case 'earthit/setup': return {
+		projectId: 3257319,
+		taskId: 1920924
 	};
 	case 'earthit/log': return {
 		projectId: 3257319,
@@ -95,15 +98,7 @@ module.exports.default = function( name ) {
 		projectId: 3257319,
 		taskId: 1920930
 	};
-
-	case 'lls/dev': return {
-		projectId: 13791662,
-		taskId: 1918572
-	};
-	case 'lls/backup': return {
-		projectId: 13791662,
-		taskId: 1918604 // That's 'deployment'
-	};
+	
 	case 'trimble/usagi/dev': return {
 		projectId: 14595477, // 'Usagi Qx' - may need to be updated over time, which is annoying.
 		taskId: 1918572
