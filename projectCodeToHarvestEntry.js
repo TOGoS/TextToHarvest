@@ -12,11 +12,14 @@ function projectNameToHarvestId( name ) {
 		return 13819525;
 	case 'lls':
 		return 17040925;
+	case 'earthit/other':
 	case 'overhead/other':
 		return 9683800;
+	case 'earthit/healthcare':
 	case 'overhead/healthcare':
 	case 'earthit/hc-overhead': // Don't use this one; use the other one.
 		return 9683765;
+	case 'earthit/geo':
 	case 'overhead/geo':
 		return 9683714;
 	case 'trimble':
@@ -69,13 +72,21 @@ module.exports.default = function( name ) {
 		projectId: 3257319,
 		taskId: 1920926
 	};
-	case 'earthit/phrebar': case 'earthit/phrebar/dev': return {
+	case 'earthit/phrebar': case 'earthit/phrebar/dev': case 'earthit/phrebar/doc': case 'earthit/phrebar/meet': return {
 		projectId: 9686850,
 		taskId: 5304076
+	};
+	case 'earthit/staff-meet': return {
+		projectId: 3257319,
+		taskId: 1920928
 	};
 	case 'earthit/team-meet': return {
 		projectId: 3257319,
 		taskId: 4936441
+	};
+	case 'earthit/tech/meet': return {
+		projectId: 9686850,
+		taskId: 5304078
 	};
 	case 'earthit/tech-talk': return {
 		projectId: 9684460, // 'Professional development'
@@ -133,6 +144,13 @@ module.exports.default = function( name ) {
 	}
 	
 	if( (m = /^unbillable\b/.exec(name)) ) return null;
-	
+
+	if( (m = /^eit-harvest:(\d+)\/(\d+)$/.exec(name)) ) {
+		return {
+			projectId: m[1],
+			taskId: m[2]
+		};
+	}
+   
 	throw new Error("Unrecognized task: '"+name+"'");
 };
