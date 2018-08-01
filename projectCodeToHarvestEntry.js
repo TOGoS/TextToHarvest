@@ -32,6 +32,7 @@ function projectNameToHarvestId( name ) {
 function taskNameToHarvestId( name ) {
 	switch( name ) {
 	case 'dev': return 1918572;
+	case 'doc': return 1919487;
 	case 'meet': case 'activlife/scrum-meeting':	return 2909951;
 	case 'sprint-grooming-meeting': return 2909950;
 	case 'sprint-review-meeting': return 7255926;
