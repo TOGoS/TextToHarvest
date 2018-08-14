@@ -12,6 +12,8 @@ function projectNameToHarvestId( name ) {
 		return 13819525;
 	case 'lls':
 		return 17040925;
+	case 'earthit/fssk':
+		return 14208873;
 	case 'earthit/other':
 	case 'overhead/other':
 		return 9683800;
@@ -32,6 +34,7 @@ function projectNameToHarvestId( name ) {
 function taskNameToHarvestId( name ) {
 	switch( name ) {
 	case 'dev': return 1918572;
+	case 'infrastructure': return 8029393; // at least w.r.t. earthit/fssk
 	case 'doc': return 1919487;
 	case 'meet': case 'activlife/scrum-meeting':	return 2909951;
 	case 'sprint-grooming-meeting': return 2909950;
