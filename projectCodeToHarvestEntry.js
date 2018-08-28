@@ -84,7 +84,7 @@ module.exports.default = function( name ) {
 		projectId: 3257319,
 		taskId: 1920928
 	};
-	case 'earthit/team-meet': return {
+	case 'earthit/team-meet': case 'earthit/devops-meet': return {
 		projectId: 3257319,
 		taskId: 4936441
 	};
